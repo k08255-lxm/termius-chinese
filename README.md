@@ -18,7 +18,7 @@
 ### Windows 用户
 
 1. 下载并解压 `termius_chinese_windows.zip` 文件
-   - 您可以从 [GitHub Releases](https://github.com/ArcSurge/Termius-Pro-zh_CN/releases) 页面下载最新版本
+   - 您可以从 [GitHub Releases](https://github.com/k08255-lxm/termius-chinese/releases) 页面下载最新版本
    - 如果下载速度慢，可以尝试使用国内镜像站点
    - 下载完成后，右键点击zip文件，选择「解压到当前文件夹」或使用解压软件解压
 
