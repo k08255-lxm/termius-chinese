@@ -91,7 +91,8 @@ Termius 的默认安装目录通常为：
 
 ## 📷 界面预览
 
-![程序界面预览](screenshot.png)
+![image](https://github.com/user-attachments/assets/ec1b391a-8497-49f8-b6de-3f7e8f57daf6)
+
 
 ## 📜 免责声明
 
