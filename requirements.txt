@@ -1,0 +1,4 @@
+# Termius 一键汉化工具依赖
+requests>=2.25.0
+urllib3>=1.26.0
+# tkinter通常随Python安装，不需要通过pip安装

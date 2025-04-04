@@ -1,0 +1,113 @@
+name: Build Release Packages
+
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+    # 允许手动触发工作流
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+    - name: Build with PyInstaller
+      run: |
+        pyinstaller --onefile --windowed --icon=icon.ico --add-data "icon.ico;." termius_chinese.py
+    - name: Create Release Package
+      run: |
+        mkdir termius_chinese_windows
+        copy dist\termius_chinese.exe termius_chinese_windows\
+        copy README.md termius_chinese_windows\
+        copy LICENSE termius_chinese_windows\
+        copy run_windows.bat termius_chinese_windows\
+        copy icon.ico termius_chinese_windows\
+        powershell Compress-Archive -Path termius_chinese_windows -DestinationPath termius_chinese_windows.zip
+    - name: Upload Windows Package
+      if: github.event_name == 'release'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./termius_chinese_windows.zip
+        asset_name: termius_chinese_windows.zip
+        asset_content_type: application/zip
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: termius_chinese_windows
+        path: termius_chinese_windows.zip
+
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pyinstaller
+    - name: Build with PyInstaller
+      run: |
+        pyinstaller --onefile --windowed termius_chinese.py
+    - name: Create Linux Package (PyInstaller)
+      run: |
+        mkdir -p termius_chinese_linux_bin
+        cp dist/termius_chinese termius_chinese_linux_bin/
+        cp README.md termius_chinese_linux_bin/
+        cp LICENSE termius_chinese_linux_bin/
+        cp run_linux.sh termius_chinese_linux_bin/
+        chmod +x termius_chinese_linux_bin/termius_chinese
+        chmod +x termius_chinese_linux_bin/run_linux.sh
+        tar -czvf termius_chinese_linux_bin.tar.gz termius_chinese_linux_bin/
+    - name: Create Linux Package (Script)
+      run: |
+        mkdir -p termius_chinese_linux
+        cp termius_chinese.py termius_chinese_linux/
+        cp run_linux.sh termius_chinese_linux/
+        cp README.md termius_chinese_linux/
+        cp LICENSE termius_chinese_linux/
+        cp requirements.txt termius_chinese_linux/
+        chmod +x termius_chinese_linux/run_linux.sh
+        tar -czvf termius_chinese_linux.tar.gz termius_chinese_linux/
+    - name: Upload Linux Binary Package
+      if: github.event_name == 'release'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./termius_chinese_linux_bin.tar.gz
+        asset_name: termius_chinese_linux_bin.tar.gz
+        asset_content_type: application/gzip
+    - name: Upload Linux Script Package
+      if: github.event_name == 'release'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./termius_chinese_linux.tar.gz
+        asset_name: termius_chinese_linux.tar.gz
+        asset_content_type: application/gzip
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: termius_chinese_linux_packages
+        path: |
+          termius_chinese_linux_bin.tar.gz
+          termius_chinese_linux.tar.gz
