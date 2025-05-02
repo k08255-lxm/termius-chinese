@@ -1,29 +1,33 @@
-name: Build Release Packages
+name: Build Release Packages # 构建发布包
 
 on:
   release:
-    types: [created]
+    types: [created] # 当 Release 创建时触发
   workflow_dispatch:
     # 允许手动触发工作流
+
+# 添加这个 permissions 块
+permissions:
+  contents: write # 需要此权限来创建 Release 的附件 (assets)
 
 jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - uses: actions/checkout@v4 # 推荐：使用最新的主版本
+    - name: Set up Python # 设置 Python 环境
+      uses: actions/setup-python@v5 # 推荐：使用最新的主版本
       with:
         python-version: '3.9'
-    - name: Install dependencies
+    - name: Install dependencies # 安装依赖
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install pyinstaller pillow
-    - name: Build with PyInstaller
+    - name: Build with PyInstaller # 使用 PyInstaller 构建
       run: |
         pyinstaller --onefile --windowed --icon=icon.ico --add-data "icon.ico;." termius_chinese.py
-    - name: Create Release Package
+    - name: Create Release Package # 创建发布包
       run: |
         mkdir termius_chinese_windows
         copy dist\termius_chinese.exe termius_chinese_windows\
@@ -32,9 +36,10 @@ jobs:
         copy run_windows.bat termius_chinese_windows\
         copy icon.ico termius_chinese_windows\
         powershell Compress-Archive -Path termius_chinese_windows -DestinationPath termius_chinese_windows.zip
-    - name: Upload Windows Package
+    - name: Upload Windows Package # 上传 Windows 包
+      # 这个步骤仅在工作流由 release 创建事件触发时运行
       if: github.event_name == 'release'
-      uses: actions/upload-release-asset@v1
+      uses: actions/upload-release-asset@v1 # 保留 v1 版本，但确保权限已设置
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
@@ -42,8 +47,8 @@ jobs:
         asset_path: ./termius_chinese_windows.zip
         asset_name: termius_chinese_windows.zip
         asset_content_type: application/zip
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4.6.2
+    - name: Upload artifacts # 上传构建产物 (针对所有触发方式)
+      uses: actions/upload-artifact@v4 # 推荐：使用最新的主版本
       with:
         name: termius_chinese_windows
         path: termius_chinese_windows.zip
@@ -51,30 +56,34 @@ jobs:
   build-linux:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
-    - name: Set up Python
-      uses: actions/setup-python@v4
+    - uses: actions/checkout@v4 # 推荐：使用最新的主版本
+    - name: Set up Python # 设置 Python 环境
+      uses: actions/setup-python@v5 # 推荐：使用最新的主版本
       with:
         python-version: '3.9'
-    - name: Install dependencies
+    - name: Install dependencies # 安装依赖
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pyinstaller pillow pillow
-    - name: Build with PyInstaller
+        pip install pyinstaller pillow # 注意：pillow 被列了两次，已移除重复项
+    - name: Build with PyInstaller # 使用 PyInstaller 构建
       run: |
-        pyinstaller --onefile --windowed termius_chinese.py
-    - name: Create Linux Package (PyInstaller)
+        # 如果有 Linux 图标，可以考虑添加 --icon=icon.png 或类似参数
+        # --windowed 参数在 Linux 上可能不是必需的或无法按预期工作，取决于你的应用和环境
+        pyinstaller --onefile termius_chinese.py # 移除了 --windowed，除非你确定在 Linux 上需要它并且能工作
+    - name: Create Linux Package (PyInstaller) # 创建 Linux 包 (PyInstaller 二进制)
       run: |
         mkdir -p termius_chinese_linux_bin
         cp dist/termius_chinese termius_chinese_linux_bin/
         cp README.md termius_chinese_linux_bin/
         cp LICENSE termius_chinese_linux_bin/
         cp run_linux.sh termius_chinese_linux_bin/
+        # 如果添加了图标，确保复制图标文件
+        # cp icon.png termius_chinese_linux_bin/
         chmod +x termius_chinese_linux_bin/termius_chinese
         chmod +x termius_chinese_linux_bin/run_linux.sh
         tar -czvf termius_chinese_linux_bin.tar.gz termius_chinese_linux_bin/
-    - name: Create Linux Package (Script)
+    - name: Create Linux Package (Script) # 创建 Linux 包 (脚本)
       run: |
         mkdir -p termius_chinese_linux
         cp termius_chinese.py termius_chinese_linux/
@@ -82,11 +91,14 @@ jobs:
         cp README.md termius_chinese_linux/
         cp LICENSE termius_chinese_linux/
         cp requirements.txt termius_chinese_linux/
+        # 如果添加了图标，确保复制图标文件
+        # cp icon.png termius_chinese_linux/
         chmod +x termius_chinese_linux/run_linux.sh
         tar -czvf termius_chinese_linux.tar.gz termius_chinese_linux/
-    - name: Upload Linux Binary Package
+    - name: Upload Linux Binary Package # 上传 Linux 二进制包
+      # 这个步骤仅在工作流由 release 创建事件触发时运行
       if: github.event_name == 'release'
-      uses: actions/upload-release-asset@v1
+      uses: actions/upload-release-asset@v1 # 保留 v1 版本，但确保权限已设置
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
@@ -94,9 +106,10 @@ jobs:
         asset_path: ./termius_chinese_linux_bin.tar.gz
         asset_name: termius_chinese_linux_bin.tar.gz
         asset_content_type: application/gzip
-    - name: Upload Linux Script Package
+    - name: Upload Linux Script Package # 上传 Linux 脚本包
+      # 这个步骤仅在工作流由 release 创建事件触发时运行
       if: github.event_name == 'release'
-      uses: actions/upload-release-asset@v1
+      uses: actions/upload-release-asset@v1 # 保留 v1 版本，但确保权限已设置
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
@@ -104,8 +117,8 @@ jobs:
         asset_path: ./termius_chinese_linux.tar.gz
         asset_name: termius_chinese_linux.tar.gz
         asset_content_type: application/gzip
-    - name: Upload artifacts
-      uses: actions/upload-artifact@v4.6.2
+    - name: Upload artifacts # 上传构建产物 (针对所有触发方式)
+      uses: actions/upload-artifact@v4 # 推荐：使用最新的主版本
       with:
         name: termius_chinese_linux_packages
         path: |
