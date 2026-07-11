@@ -1,54 +1,49 @@
-name: Build Release Packages # 构建发布包
+name: Build Release Packages
 
 on:
   release:
-    types: [created] # 当 Release 创建时触发
+    types: [published]
   workflow_dispatch:
     # 允许手动触发工作流
 
-# 添加这个 permissions 块
 permissions:
-  contents: write # 需要此权限来创建 Release 的附件 (assets)
+  contents: write
 
 jobs:
   build-windows:
     runs-on: windows-latest
     steps:
-    - uses: actions/checkout@v4 # 推荐：使用最新的主版本
-    - name: Set up Python # 设置 Python 环境
-      uses: actions/setup-python@v5 # 推荐：使用最新的主版本
+    - uses: actions/checkout@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
       with:
-        python-version: '3.9'
-    - name: Install dependencies # 安装依赖
+        python-version: '3.12'
+    - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-        pip install pyinstaller pillow
-    - name: Build with PyInstaller # 使用 PyInstaller 构建
+        pip install "pyinstaller>=6.10,<7"
+    - name: Build with PyInstaller
       run: |
-        pyinstaller --onefile --windowed --icon=icon.ico --add-data "icon.ico;." termius_chinese.py
-    - name: Create Release Package # 创建发布包
+        pyinstaller --noconfirm --clean --onefile --windowed --name termius_chinese termius_chinese.py
+    - name: Smoke test executable
+      shell: pwsh
       run: |
-        mkdir termius_chinese_windows
-        copy dist\termius_chinese.exe termius_chinese_windows\
-        copy README.md termius_chinese_windows\
-        copy LICENSE termius_chinese_windows\
-        copy run_windows.bat termius_chinese_windows\
-        copy icon.ico termius_chinese_windows\
-        powershell Compress-Archive -Path termius_chinese_windows -DestinationPath termius_chinese_windows.zip
-    - name: Upload Windows Package # 上传 Windows 包
-      # 这个步骤仅在工作流由 release 创建事件触发时运行
+        & .\dist\termius_chinese.exe --health-check
+        if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    - name: Create Release Package
+      shell: pwsh
+      run: |
+        New-Item -ItemType Directory -Path termius_chinese_windows
+        Copy-Item dist\termius_chinese.exe, README.md, LICENSE, run_windows.bat -Destination termius_chinese_windows
+        Compress-Archive -Path termius_chinese_windows -DestinationPath termius_chinese_windows.zip
+    - name: Upload Windows package to release
       if: github.event_name == 'release'
-      uses: actions/upload-release-asset@v1 # 保留 v1 版本，但确保权限已设置
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ github.event.release.upload_url }}
-        asset_path: ./termius_chinese_windows.zip
-        asset_name: termius_chinese_windows.zip
-        asset_content_type: application/zip
-    - name: Upload artifacts # 上传构建产物 (针对所有触发方式)
-      uses: actions/upload-artifact@v4 # 推荐：使用最新的主版本
+        GH_TOKEN: ${{ github.token }}
+      run: gh release upload "${{ github.event.release.tag_name }}" termius_chinese_windows.zip --clobber
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
       with:
         name: termius_chinese_windows
         path: termius_chinese_windows.zip

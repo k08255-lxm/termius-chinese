@@ -17,12 +17,16 @@ import threading
 import json
 
 # 版本信息
-VERSION = "1.0.0"
+VERSION = "1.0.2"
 
 # GitHub 仓库信息
 GITHUB_REPO = "ArcSurge/Termius-Pro-zh_CN"
 GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases/latest"
 GITHUB_RELEASE_URL = f"https://github.com/{GITHUB_REPO}/releases/latest"
+HTTP_HEADERS = {
+    "Accept": "application/vnd.github+json",
+    "User-Agent": f"termius-chinese/{VERSION}",
+}
 
 # 默认安装路径
 def get_default_install_path():
@@ -51,7 +55,8 @@ def get_system_type():
 # 获取最新版本信息
 def get_latest_release_info():
     try:
-        with urllib.request.urlopen(GITHUB_API_URL) as response:
+        request = urllib.request.Request(GITHUB_API_URL, headers=HTTP_HEADERS)
+        with urllib.request.urlopen(request, timeout=30) as response:
             data = json.loads(response.read().decode())
             return data
     except Exception as e:
@@ -61,7 +66,8 @@ def get_latest_release_info():
 # 下载文件
 def download_file(url, dest_path, progress_callback=None):
     try:
-        with urllib.request.urlopen(url) as response:
+        request = urllib.request.Request(url, headers={"User-Agent": HTTP_HEADERS["User-Agent"]})
+        with urllib.request.urlopen(request, timeout=60) as response:
             file_size = int(response.info().get('Content-Length', 0))
             downloaded = 0
             chunk_size = 1024 * 1024  # 1MB
@@ -355,30 +361,19 @@ class TermiusChineseApp:
 
 # 主函数
 def main():
-    # 检查是否以管理员权限运行（仅在 Windows 上）
-    if platform.system().lower() == "windows":
-        try:
-            # 尝试创建一个文件在 Program Files 目录下，如果成功则有管理员权限
-            test_path = os.path.join(os.environ["ProgramFiles"], "test_admin_rights.txt")
-            with open(test_path, "w") as f:
-                f.write("test")
-            os.remove(test_path)
-        except:
-            # 如果失败，提示用户以管理员身份运行
-            if sys.executable.endswith(".exe"):
-                # 如果是 exe 文件，使用 UAC 提示
-                ctypes_import = "import ctypes\nctypes.windll.shell32.ShellExecuteW(None, 'runas', sys.executable, ' '.join(sys.argv), None, 1)\nsys.exit(0)"
-                exec(ctypes_import)
-            else:
-                # 如果是 Python 脚本，提示用户手动以管理员身份运行
-                print("请以管理员身份运行此程序")
-                input("按回车键退出...")
-                sys.exit(1)
+    # CI 会实际启动打包后的 EXE，避免再次发布“构建成功但无法启动”的文件。
+    if "--health-check" in sys.argv:
+        print(f"termius-chinese {VERSION}: OK")
+        return 0
+
+    # Termius 默认安装在当前用户的 LocalAppData 中，不应强制请求管理员权限。
+    # 如果用户选择了受保护的自定义目录，复制失败时界面会明确提示以管理员身份重试。
     
     # 创建 GUI
     root = tk.Tk()
     app = TermiusChineseApp(root)
     root.mainloop()
+    return 0
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
