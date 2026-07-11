@@ -3,23 +3,20 @@ echo Termius 一键汉化工具启动脚本
 echo ============================
 echo.
 
-:: 检查是否以管理员身份运行
->nul 2>&1 "%SYSTEMROOT%\system32\cacls.exe" "%SYSTEMROOT%\system32\config\system"
-if '%errorlevel%' NEQ '0' (
-    echo 请求管理员权限...
-    goto UACPrompt
-) else ( goto gotAdmin )
+CD /D "%~dp0"
 
-:UACPrompt
-    echo Set UAC = CreateObject^("Shell.Application"^) > "%temp%\getadmin.vbs"
-    echo UAC.ShellExecute "%~s0", "", "", "runas", 1 >> "%temp%\getadmin.vbs"
-    "%temp%\getadmin.vbs"
-    exit /B
+if exist "termius_chinese.exe" (
+    echo 启动汉化工具...
+    start "" "termius_chinese.exe"
+    exit /b 0
+)
 
-:gotAdmin
-    if exist "%temp%\getadmin.vbs" ( del "%temp%\getadmin.vbs" )
-    pushd "%CD%"
-    CD /D "%~dp0"
+if not exist "termius_chinese.py" (
+    echo 未找到 termius_chinese.exe 或 termius_chinese.py！
+    echo 请重新下载并完整解压 Windows 压缩包。
+    pause
+    exit /b 1
+)
 
 echo 检查 Python 环境...
 python --version >nul 2>&1
@@ -32,9 +29,6 @@ if %errorlevel% neq 0 (
     pause >nul
     exit /b 1
 )
-
-echo 检查并安装必要的依赖...
-pip install -q tkinter
 
 echo 启动汉化工具...
 python termius_chinese.py
